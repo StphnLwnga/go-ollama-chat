@@ -1,6 +1,6 @@
 # go-ollama-chat
 
-A real-time, streaming AI chat app — **Go** on the backend, a **local LLM via [Ollama](https://ollama.com)** for inference, and a polished, dependency-light frontend. Replies stream into the browser token-by-token over Server-Sent Events. No cloud, no API keys, fully private.
+A real-time, streaming AI chat app — **Go** on the backend, a **local LLM via [Ollama](https://ollama.com)** for inference, and a dependency-light frontend. Replies stream into the browser token-by-token over Server-Sent Events. No cloud, no API keys, fully private.
 
 ![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go&logoColor=white)
 ![Ollama](https://img.shields.io/badge/LLM-Ollama%20(local)-000000)
