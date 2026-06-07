@@ -1,3 +1,3 @@
-module github.com/EOEboh/mb-bootcamp-scaffold
+module github.com/StphnLwnga/go-ollama-chat
 
 go 1.22

@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/EOEboh/mb-bootcamp-scaffold/handlers"
+	"github.com/StphnLwnga/go-ollama-chat/handlers"
 )
 
 func main() {
