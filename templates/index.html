@@ -3,15 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bootcamp Scaffold</title>
+    <title>AI Chat — Project 01</title>
     <link rel="stylesheet" href="/static/style.css">
-    <!-- HTMX: progressive enhancement for server interactions -->
-    <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+    <!-- Markdown rendering for COMPLETED assistant replies (Extension 4). -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js" defer></script>
+    <!-- App logic (served live from /static — edits need only a browser refresh). -->
+    <script src="/static/chat.js" defer></script>
 </head>
 <body>
-    <main>
-        <h1>Bootcamp Scaffold</h1>
-        <p>Replace this template with your own project UI</p>
+    <main class="app">
+        <header class="app-header">
+            <div class="logo">✦</div>
+            <h1>AI Chat <span class="sub">· Project 01</span></h1>
+        </header>
+
+        <!-- Conversation: scroll area + empty state + scroll-to-bottom button -->
+        <section class="conversation">
+            <div class="conversation-scroll" id="scroll">
+                <div class="empty-state" id="empty">
+                    <div class="icon">✦</div>
+                    <h2>Start a conversation</h2>
+                    <p>Ask the local model anything — replies stream in live.</p>
+                </div>
+                <div class="messages" id="messages"></div>
+            </div>
+            <button class="scroll-bottom" id="scrollBtn" aria-label="Scroll to bottom" hidden>↓</button>
+        </section>
+
+        <!-- PromptInput: auto-grow textarea + toolbar + send/stop button -->
+        <form class="prompt-input" id="chat-form">
+            <div class="prompt-body">
+                <textarea id="message" rows="1" placeholder="Ask anything…" autofocus></textarea>
+            </div>
+            <div class="prompt-footer">
+                <div class="prompt-tools">
+                    <span class="model-pill">llama3.2:3b</span>
+                </div>
+                <button id="send" type="submit" class="submit-btn" data-state="ready" aria-label="Send">
+                    <svg class="icon-send" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>
+                    </svg>
+                    <svg class="icon-stop" viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="6" y="6" width="12" height="12" rx="2"/>
+                    </svg>
+                </button>
+            </div>
+        </form>
     </main>
 </body>
 </html>
