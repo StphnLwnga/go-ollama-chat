@@ -69,7 +69,7 @@ function renderMarkdown(response, text) {
 // ── Auto-grow textarea + Enter-to-send ──────────────────────────────────
 function autogrow() {
     input.style.height = "auto";
-    input.style.height = Math.min(input.scrollHeight, 180) + "px";
+    input.style.height = `${Math.min(input.scrollHeight, 180)}px`;
 }
 input.addEventListener("input", autogrow);
 input.addEventListener("keydown", (e) => {
@@ -143,7 +143,7 @@ form.addEventListener("submit", async (e) => {
         if (err.name === "AbortError") {
             if (full) renderMarkdown(response, full); // user stopped — keep what we got
         } else {
-            response.append(" ⚠️ (" + err.message + ")");
+            response.append(` ⚠️ (${err.message})`);
         }
     } finally {
         setStreaming(false);
