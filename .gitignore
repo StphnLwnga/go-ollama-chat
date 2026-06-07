@@ -34,6 +34,9 @@ go.work.sum
 # Build output
 bin/
 
+# Local data (the conversation database)
+*.db
+
 # Local only — intentionally kept out of the public repo
 docs/
 AGENTS.md

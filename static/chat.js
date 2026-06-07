@@ -171,3 +171,27 @@ form.addEventListener("submit", async (e) => {
         input.focus();
     }
 });
+
+// ── Restore the saved conversation on load (Extension 6) ─────────────────
+// Pull persisted turns from the server and rebuild both the in-memory history
+// and the visible bubbles, so a refresh doesn't lose the conversation.
+async function restoreHistory() {
+    let saved;
+    try {
+        const res = await fetch("/history");
+        saved = (await res.json()) || [];   // empty DB returns null → treat as []
+    } catch {
+        return;                             // no history is fine — just start fresh
+    }
+    for (const m of saved) {
+        history.push(m);                    // back into the running transcript
+        if (m.role === "user") {
+            addUserMessage(m.content);
+        } else if (m.role === "assistant") {
+            const { response, cursor } = addAssistantMessage();
+            cursor.remove();                // a saved reply is already complete — no cursor
+            renderMarkdown(response, m.content);
+        }
+    }
+}
+restoreHistory();
