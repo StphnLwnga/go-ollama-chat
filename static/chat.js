@@ -17,6 +17,9 @@ const empty     = document.getElementById("empty");
 let isStreaming = false;
 let controller  = null; // AbortController for the in-flight request
 
+// The running transcript. We re-send the whole thing every request — that IS the memory.
+const history = [{ role: "system", content: "You are a helpful assistant." }];
+
 // ── Scroll helpers ──────────────────────────────────────────────────────
 const nearBottom = () =>
     scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 80;
@@ -95,6 +98,7 @@ form.addEventListener("submit", async (e) => {
     if (!text) return;
 
     addUserMessage(text);
+    history.push({ role: "user", content: text }); // remember the question
     input.value = "";
     autogrow();
 
@@ -103,11 +107,14 @@ form.addEventListener("submit", async (e) => {
     setStreaming(true);
 
     let full = "";
+    // Push the assistant's reply into history once complete (partial text on stop is fine).
+    const remember = () => { if (full) history.push({ role: "assistant", content: full }); };
+
     try {
         const res = await fetch("/chat", {
             method:  "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body:    new URLSearchParams({ message: text }),
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({ messages: history }), // send the WHOLE conversation
             signal:  controller.signal,
         });
 
@@ -127,8 +134,8 @@ form.addEventListener("submit", async (e) => {
                 if (!evt.startsWith("data: ")) continue;
                 const chunk = JSON.parse(evt.slice(6));
 
-                if (chunk === "[DONE]")  { if (full) renderMarkdown(response, full); cursor.remove(); return; }
-                if (chunk === "[ERROR]") { cursor.remove(); response.append(" ⚠️ (stream error)"); return; }
+                if (chunk === "[DONE]")  { if (full) renderMarkdown(response, full); remember(); cursor.remove(); return; }
+                if (chunk === "[ERROR]") { cursor.remove(); response.append(" ⚠️ (stream error)"); history.pop(); return; }
 
                 full += chunk;
                 cursor.before(document.createTextNode(chunk)); // safe plain text while streaming
@@ -137,13 +144,16 @@ form.addEventListener("submit", async (e) => {
         }
         // Stream closed without an explicit [DONE].
         if (full) renderMarkdown(response, full);
+        remember();
         cursor.remove();
     } catch (err) {
         cursor.remove();
         if (err.name === "AbortError") {
             if (full) renderMarkdown(response, full); // user stopped — keep what we got
+            remember();
         } else {
             response.append(` ⚠️ (${err.message})`);
+            history.pop(); // reply failed — drop the unanswered question
         }
     } finally {
         setStreaming(false);
