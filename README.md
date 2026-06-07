@@ -4,7 +4,7 @@ A real-time, streaming AI chat app — **Go** on the backend, a **local LLM via 
 
 ![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go&logoColor=white)
 ![Ollama](https://img.shields.io/badge/LLM-Ollama%20(local)-000000)
-![Backend](https://img.shields.io/badge/backend-stdlib%20only-success)
+![SQLite](https://img.shields.io/badge/storage-SQLite-003B57?logo=sqlite&logoColor=white)
 
 ## Features
 
@@ -13,15 +13,17 @@ A real-time, streaming AI chat app — **Go** on the backend, a **local LLM via 
 - **Markdown rendering** — assistant replies render as formatted markdown (code blocks, lists) once complete, sanitized against XSS (via `marked` + `DOMPurify`).
 - **Stop generation** — cancel a streaming reply mid-flight (browser `AbortController` → the server stops cleanly).
 - **100% local & private** — prompts never leave your machine. No API keys.
-- **Tiny backend** — Go standard library only, zero third-party Go packages.
+- **Persistent** — conversations are saved to SQLite and restored on refresh.
+- **Lean backend** — Go standard library plus one pure-Go SQLite driver (no CGO, no C toolchain).
 
 ## Stack
 
 | Layer     | Tech                            |
 |-----------|---------------------------------|
-| Backend   | Go 1.22 (`net/http`, stdlib)    |
+| Backend   | Go (`net/http`, stdlib)         |
 | LLM       | Ollama (`llama3.2:3b` default)  |
 | Transport | Server-Sent Events (SSE)        |
+| Storage   | SQLite (pure-Go `modernc.org/sqlite`) |
 | Frontend  | Vanilla JS + CSS                |
 
 ## How it works
@@ -57,7 +59,9 @@ make run            # or: go run main.go
 ```bash
 main.go                HTTP server + route registration
 ai/ollama.go           Ollama client (Chat + ChatStream) — the only file that talks to the LLM
+db/db.go               SQLite persistence — saves and loads the conversation
 handlers/chat.go       The SSE streaming chat endpoint
+handlers/history.go    Serves the saved conversation as JSON
 handlers/handlers.go   Page handler
 templates/index.html   Chat UI
 static/                style.css + chat.js
