@@ -20,6 +20,16 @@ let controller  = null; // AbortController for the in-flight request
 // The running transcript. We re-send the whole thing every request — that IS the memory.
 const history = [{ role: "system", content: "You are a helpful assistant." }];
 
+// ── System-prompt editor (Extension 3) ──────────────────────────────────
+// history[0] is the AI's instructions; editing it changes behaviour from the next message on.
+const settingsToggle = document.getElementById("settings-toggle");
+const settings       = document.getElementById("settings");
+const systemPrompt   = document.getElementById("system-prompt");
+
+systemPrompt.value = history[0].content;              // show the current instructions
+settingsToggle.addEventListener("click", () => { settings.hidden = !settings.hidden; });
+systemPrompt.addEventListener("input", () => { history[0].content = systemPrompt.value; });
+
 // ── Scroll helpers ──────────────────────────────────────────────────────
 const nearBottom = () =>
     scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 80;

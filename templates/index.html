@@ -16,7 +16,15 @@
         <header class="app-header">
             <div class="logo">✦</div>
             <h1>AI Chat <span class="sub">· Project 01</span></h1>
+            <button type="button" id="settings-toggle" class="icon-btn" aria-label="Settings">⚙</button>
         </header>
+
+        <!-- System-prompt editor (Extension 3): the AI's instructions = the first message in every request -->
+        <div class="settings" id="settings" hidden>
+            <label for="system-prompt">System prompt — the AI's instructions</label>
+            <textarea id="system-prompt" rows="3"></textarea>
+            <p class="hint">Changes apply to your next message.</p>
+        </div>
 
         <!-- Conversation: scroll area + empty state + scroll-to-bottom button -->
         <section class="conversation">

@@ -41,6 +41,22 @@ html, body {
                     display: grid; place-items: center; font-weight: 700; }
 .app-header h1 { font-size: 1rem; font-weight: 600; }
 .app-header .sub { color: var(--text-muted); font-weight: 400; }
+.icon-btn        { margin-left: auto; width: 32px; height: 32px; border: 1px solid var(--border);
+                   background: var(--surface); color: var(--text-muted); border-radius: var(--radius-sm);
+                   cursor: pointer; font-size: 15px; line-height: 1; }
+.icon-btn:hover  { color: var(--text); border-color: var(--accent); }
+
+/* System-prompt editor (E3) */
+.settings           { background: var(--surface); border: 1px solid var(--border);
+                      border-radius: var(--radius); padding: 12px 14px;
+                      display: flex; flex-direction: column; gap: 6px; }
+.settings[hidden]   { display: none; }
+.settings label     { font-size: 0.85rem; color: var(--text-muted); }
+.settings textarea  { width: 100%; resize: vertical; background: var(--bg); color: var(--text);
+                      border: 1px solid var(--border); border-radius: var(--radius-sm);
+                      padding: 8px 10px; font-family: var(--font-sans); font-size: 0.95rem; }
+.settings textarea:focus { outline: none; border-color: var(--accent); }
+.settings .hint     { font-size: 0.78rem; color: var(--text-muted); }
 
 /* ─ Conversation (scroll area) ─────────────────────────────────────────── */
 .conversation        { position: relative; flex: 1; min-height: 0;
