@@ -1,77 +1,64 @@
-**The rule:** AI communication only lives in `ai/`. Handlers never call `http.Post` to Ollama directly. This makes it trivially easy to swap providers.
+# go-ollama-chat
 
----
+A real-time, streaming AI chat app — **Go** on the backend, a **local LLM via [Ollama](https://ollama.com)** for inference, and a polished, dependency-light frontend. Replies stream into the browser token-by-token over Server-Sent Events. No cloud, no API keys, fully private.
+
+![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go&logoColor=white)
+![Ollama](https://img.shields.io/badge/LLM-Ollama%20(local)-000000)
+![Backend](https://img.shields.io/badge/backend-stdlib%20only-success)
+
+## Features
+
+- **Live token streaming** — replies appear as they're generated, via SSE (`text/event-stream`) with per-token HTTP flushing.
+- **Polished chat UI** — auto-growing prompt box, role-based message bubbles, auto-scroll, and a scroll-to-bottom control.
+- **Markdown rendering** — assistant replies render as formatted markdown (code blocks, lists) once complete, sanitized against XSS (via `marked` + `DOMPurify`).
+- **Stop generation** — cancel a streaming reply mid-flight (browser `AbortController` → the server stops cleanly).
+- **100% local & private** — prompts never leave your machine. No API keys.
+- **Tiny backend** — Go standard library only, zero third-party Go packages.
+
+## Stack
+
+| Layer     | Tech                            |
+|-----------|---------------------------------|
+| Backend   | Go 1.22 (`net/http`, stdlib)    |
+| LLM       | Ollama (`llama3.2:3b` default)  |
+| Transport | Server-Sent Events (SSE)        |
+| Frontend  | Vanilla JS + CSS                |
+
+## How it works
+
+```bash
+Browser  ──POST /chat──▶  Go server  ──stream:true──▶  Ollama
+         ◀──SSE tokens──              ◀──NDJSON chunks──
+```
+
+The browser POSTs a message; the Go handler opens an SSE stream, requests a streaming completion from Ollama, and relays each token to the browser the instant it arrives. All LLM communication is isolated in the `ai/` package (`ai.Chat` / `ai.ChatStream`), so the provider can be swapped without touching any HTTP handler.
 
 ## Prerequisites
 
 - [Go 1.22+](https://go.dev/dl/)
-- [Ollama](https://ollama.com) installed and running (the Mac app auto-starts; run `ollama serve` only if using the CLI)
+- [Ollama](https://ollama.com), running locally
 
-## Quick Start
+## Quick start
 
 ```bash
-# 1. Clone or use this as a GitHub template
-git clone https://github.com/EOEboh/mb-bootcamp-scaffold my-project
-cd my-project
+git clone https://github.com/StphnLwnga/go-ollama-chat
+cd go-ollama-chat
 
-# 2. Replace the module name in go.mod
-# Change: github.com/EOEboh/mb-bootcamp-scaffold
-# To:     github.com/EOEboh/my-project-name
+# Pull the default model (first run only, ~2 GB)
+ollama pull llama3.2:3b
 
-# 3. Pull the required models (first time only — ~6 GB total)
-make setup
-
-# 4. Run
-make run
+# Run
+make run            # or: go run main.go
 # → http://localhost:8080
 ```
 
----
+## Project layout
 
-## The ai/ Package API
-
-Every project uses exactly two functions:
-
-```go
-// Non-streaming: returns the full response as a string
-response, err := ai.Chat(ai.DefaultModel, []ai.Message{
-    {Role: "system", Content: "You are a helpful assistant."},
-    {Role: "user",   Content: "Hello!"},
-})
-
-// Streaming: calls onChunk for each token as it arrives
-err := ai.ChatStream(ai.DefaultModel, messages, func(chunk string) error {
-    fmt.Println(chunk) // do something with each token
-    return nil         // return error to abort stream early
-})
+```bash
+main.go                HTTP server + route registration
+ai/ollama.go           Ollama client (Chat + ChatStream) — the only file that talks to the LLM
+handlers/chat.go       The SSE streaming chat endpoint
+handlers/handlers.go   Page handler
+templates/index.html   Chat UI
+static/                style.css + chat.js
 ```
-
----
-
-## Stack
-
-| Layer      | Technology                |
-|------------|---------------------------|
-| Backend    | Go 1.22+                  |
-| LLM        | Ollama (local)            |
-| Frontend   | HTMX + Vanilla JS         |
-| Database   | SQLite (projects 4, 5, 10)|
-| Streaming  | SSE / WebSockets          |
-| Deploy     | Docker (project 10)       |
-
----
-
-## Projects Built on This Scaffold
-
-| #  | Project                  | Key Addition                        | Repo                                                                                        |
-|----|--------------------------|-------------------------------------|---------------------------------------------------------------------------------------------|
-| 1  | AI Chat Interface        | SSE streaming                       | [mb-project-01-chat](https://github.com/EOEboh/mb-project-01-chat)                         |
-| 2  | Code Snippet Explainer   | System prompts + code models        | [mb-project-02-code-explainer](https://github.com/EOEboh/mb-project-02-code-explainer)     |
-| 3  | Smart Text Summarizer    | HTMX + prompt engineering           | [mb-project-03-summarizer](https://github.com/EOEboh/mb-project-03-summarizer)             |
-| 4  | AI Resume Analyzer       | File uploads + PDF extraction       | [mb-project-04-resume-analyzer](https://github.com/EOEboh/mb-project-04-resume-analyzer)   |
-| 5  | AI Writing Assistant     | SQLite + contextual AI commands     | [mb-project-05-writing-assistant](https://github.com/EOEboh/mb-project-05-writing-assistant)|
-| 6  | Image Caption Generator  | Multimodal (LLaVA vision model)     | [mb-project-06-image-captioner](https://github.com/EOEboh/mb-project-06-image-captioner)   |
-| 7  | API Doc Generator        | Multi-pass prompting + export       | [mb-project-07-api-doc-generator](https://github.com/EOEboh/mb-project-07-api-doc-generator)|
-| 8  | Meeting Notes Summarizer | Whisper audio pipeline              | [mb-project-08-meeting-notes](https://github.com/EOEboh/mb-project-08-meeting-notes)       |
-| 9  | AI Agent with Tool Use   | ReAct pattern + tool dispatch       | [mb-project-09-ai-agent](https://github.com/EOEboh/mb-project-09-ai-agent)                 |
-| 10 | Full-Stack AI SaaS       | JWT + multi-tenancy + Docker        | [mb-project-10-ai-saas](https://github.com/EOEboh/mb-project-10-ai-saas)                   |
