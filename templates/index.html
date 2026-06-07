@@ -28,13 +28,13 @@
                 </div>
                 <div class="messages" id="messages"></div>
             </div>
-            <button class="scroll-bottom" id="scrollBtn" aria-label="Scroll to bottom" hidden>↓</button>
+            <button type="button" class="scroll-bottom" id="scrollBtn" aria-label="Scroll to bottom" hidden>↓</button>
         </section>
 
         <!-- PromptInput: auto-grow textarea + toolbar + send/stop button -->
         <form class="prompt-input" id="chat-form">
             <div class="prompt-body">
-                <textarea id="message" rows="1" placeholder="Ask anything…" autofocus></textarea>
+                <textarea id="message" rows="1" placeholder="Ask anything…" ></textarea>
             </div>
             <div class="prompt-footer">
                 <div class="prompt-tools">
@@ -42,10 +42,10 @@
                 </div>
                 <button id="send" type="submit" class="submit-btn" data-state="ready" aria-label="Send">
                     <svg class="icon-send" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>
                     </svg>
-                    <svg class="icon-stop" viewBox="0 0 24 24" fill="currentColor">
+                    <svg class="icon-stop" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <rect x="6" y="6" width="12" height="12" rx="2"/>
                     </svg>
                 </button>
