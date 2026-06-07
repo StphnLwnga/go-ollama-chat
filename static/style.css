@@ -142,3 +142,23 @@ html, body {
 .submit-btn[data-state="streaming"]            { background: var(--surface-2); color: var(--text); }
 .submit-btn[data-state="streaming"] .icon-send { display: none; }
 .submit-btn[data-state="streaming"] .icon-stop { display: block; }
+
+/* ─ Themed scrollbars (match the dark containers) ──────────────────────── */
+.conversation-scroll, .prompt-body textarea, .settings textarea {
+    scrollbar-width: thin;                       /* Firefox */
+    scrollbar-color: var(--border) transparent;  /* thumb, track (Firefox) */
+}
+.conversation-scroll::-webkit-scrollbar,
+.prompt-body textarea::-webkit-scrollbar,
+.settings textarea::-webkit-scrollbar { width: 10px; height: 10px; }
+.conversation-scroll::-webkit-scrollbar-track,
+.prompt-body textarea::-webkit-scrollbar-track,
+.settings textarea::-webkit-scrollbar-track { background: transparent; }
+.conversation-scroll::-webkit-scrollbar-thumb,
+.prompt-body textarea::-webkit-scrollbar-thumb,
+.settings textarea::-webkit-scrollbar-thumb {
+    background: var(--border); border-radius: 999px;
+}
+.conversation-scroll::-webkit-scrollbar-thumb:hover,
+.prompt-body textarea::-webkit-scrollbar-thumb:hover,
+.settings textarea::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
