@@ -15,6 +15,7 @@ func main() {
 
 	// Application routes — add yours here
 	mux.HandleFunc("/", handlers.Index)
+	mux.HandleFunc("POST /chat", handlers.Chat) // Project 01: streaming chat endpoint
 
 	log.Println("🚀 Server running → http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
