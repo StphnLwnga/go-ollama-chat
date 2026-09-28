@@ -131,6 +131,11 @@ html, body {
 .model-pill            { font-size: 0.8rem; color: var(--text-muted); background: var(--surface-2);
                          border: 1px solid var(--border); border-radius: 999px;
                          padding: 4px 10px; font-family: var(--font-mono); }
+.model-select          { font-size: 0.8rem; color: var(--text-muted); background: var(--surface-2);
+                         border: 1px solid var(--border); border-radius: 999px;
+                         padding: 4px 10px; font-family: var(--font-mono); cursor: pointer; }
+.model-select:hover    { color: var(--text); border-color: var(--accent); }
+.model-select:focus    { outline: none; border-color: var(--accent); }
 
 /* Submit button: send icon by default, stop icon while streaming */
 .submit-btn            { width: 36px; height: 36px; border: none; border-radius: 9px;

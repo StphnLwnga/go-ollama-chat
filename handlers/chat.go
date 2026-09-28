@@ -19,6 +19,7 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 	// Re-sending every prior turn each time is what gives the chat its
 	// "memory" — the model itself remembers nothing between requests.
 	var req struct {
+		Model    string       `json:"model"` // chosen at runtime by the browser (E5)
 		Messages []ai.Message `json:"messages"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -28,6 +29,12 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 	if len(req.Messages) == 0 {
 		http.Error(w, "messages is required", http.StatusBadRequest)
 		return
+	}
+
+	// Fall back to the default if the client didn't send a model.
+	model := req.Model
+	if model == "" {
+		model = ai.DefaultModel
 	}
 
 	// 2. Set SSE headers ────────────────────────────────────────────────
@@ -56,7 +63,7 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 	// Pass the full conversation to Ollama; each token comes back via the
 	// callback, which we forward to the browser AND append to `reply`.
 	var reply strings.Builder
-	err := ai.ChatStream(ai.DefaultModel, req.Messages, func(token string) error {
+	err := ai.ChatStream(model, req.Messages, func(token string) error {
 		reply.WriteString(token)             // accumulate so we can save the whole reply
 		payload, err := json.Marshal(token) // JSON-encode so newlines/quotes can't break the SSE format
 		if err != nil {

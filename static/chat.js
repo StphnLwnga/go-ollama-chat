@@ -13,6 +13,7 @@ const messages  = document.getElementById("messages");
 const scroll     = document.getElementById("scroll");
 const scrollBtn = document.getElementById("scrollBtn");
 const empty     = document.getElementById("empty");
+const modelSelect = document.getElementById("model"); // E5: model chosen at runtime
 
 let isStreaming = false;
 let controller  = null; // AbortController for the in-flight request
@@ -124,7 +125,7 @@ form.addEventListener("submit", async (e) => {
         const res = await fetch("/chat", {
             method:  "POST",
             headers: { "Content-Type": "application/json" },
-            body:    JSON.stringify({ messages: history }), // send the WHOLE conversation
+            body:    JSON.stringify({ model: modelSelect.value, messages: history }), // chosen model + WHOLE conversation
             signal:  controller.signal,
         });
 

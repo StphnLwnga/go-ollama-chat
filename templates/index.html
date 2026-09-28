@@ -46,7 +46,10 @@
             </div>
             <div class="prompt-footer">
                 <div class="prompt-tools">
-                    <span class="model-pill">llama3.2:3b</span>
+                    <select id="model" class="model-select" aria-label="Model">
+                        <option value="llama3.2:3b">llama3.2:3b</option>
+                        <option value="llava:7b">llava:7b</option>
+                    </select>
                 </div>
                 <button id="send" type="submit" class="submit-btn" data-state="ready" aria-label="Send">
                     <svg class="icon-send" viewBox="0 0 24 24" fill="none" stroke="currentColor"
