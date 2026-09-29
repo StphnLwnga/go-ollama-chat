@@ -1,67 +1,71 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chat — Project 01</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <!-- Markdown rendering for COMPLETED assistant replies (Extension 4). -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js" defer></script>
-    <!-- App logic (served live from /static — edits need only a browser refresh). -->
-    <script src="/static/chat.js" defer></script>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>AI Chat — Project 01</title>
+	<link rel="stylesheet" href="/static/style.css">
+	<!-- Markdown rendering for COMPLETED assistant replies (Extension 4). -->
+	<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+	<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js" defer></script>
+	<!-- App logic (served live from /static — edits need only a browser refresh). -->
+	<script src="/static/chat.js" defer></script>
 </head>
+
 <body>
-    <main class="app">
-        <header class="app-header">
-            <div class="logo">✦</div>
-            <h1>AI Chat <span class="sub">· Project 01</span></h1>
-            <button type="button" id="settings-toggle" class="icon-btn" aria-label="Settings">⚙</button>
-        </header>
+	<main class="app">
+		<header class="app-header">
+			<div class="logo">✦</div>
+			<h1>AI Chat <span class="sub">· Project 01</span></h1>
+			<button type="button" id="settings-toggle" class="icon-btn" aria-label="Settings">⚙</button>
+		</header>
 
-        <!-- System-prompt editor (Extension 3): the AI's instructions = the first message in every request -->
-        <div class="settings" id="settings" hidden>
-            <label for="system-prompt">System prompt — the AI's instructions</label>
-            <textarea id="system-prompt" rows="3"></textarea>
-            <p class="hint">Changes apply to your next message.</p>
-        </div>
+		<!-- System-prompt editor (Extension 3): the AI's instructions = the first message in every request -->
+		<div class="settings" id="settings" hidden>
+			<label for="system-prompt">System prompt — the AI's instructions</label>
+			<textarea id="system-prompt" rows="3"></textarea>
+			<p class="hint">Changes apply to your next message.</p>
+		</div>
 
-        <!-- Conversation: scroll area + empty state + scroll-to-bottom button -->
-        <section class="conversation">
-            <div class="conversation-scroll" id="scroll">
-                <div class="empty-state" id="empty">
-                    <div class="icon">✦</div>
-                    <h2>Start a conversation</h2>
-                    <p>Ask the local model anything — replies stream in live.</p>
-                </div>
-                <div class="messages" id="messages"></div>
-            </div>
-            <button type="button" class="scroll-bottom" id="scrollBtn" aria-label="Scroll to bottom" hidden>↓</button>
-        </section>
+		<!-- Conversation: scroll area + empty state + scroll-to-bottom button -->
+		<section class="conversation">
+			<div class="conversation-scroll" id="scroll">
+				<div class="empty-state" id="empty">
+					<div class="icon">✦</div>
+					<h2>Start a conversation</h2>
+					<p>Ask the local model anything — replies stream in live.</p>
+				</div>
+				<div class="messages" id="messages"></div>
+			</div>
+			<button type="button" class="scroll-bottom" id="scrollBtn" aria-label="Scroll to bottom" hidden>↓</button>
+		</section>
 
-        <!-- PromptInput: auto-grow textarea + toolbar + send/stop button -->
-        <form class="prompt-input" id="chat-form">
-            <div class="prompt-body">
-                <textarea id="message" rows="1" placeholder="Ask anything…" ></textarea>
-            </div>
-            <div class="prompt-footer">
-                <div class="prompt-tools">
-                    <select id="model" class="model-select" aria-label="Model">
-                        <option value="llama3.2:3b">llama3.2:3b</option>
-                        <option value="llava:7b">llava:7b</option>
-                    </select>
-                </div>
-                <button id="send" type="submit" class="submit-btn" data-state="ready" aria-label="Send">
-                    <svg class="icon-send" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>
-                    </svg>
-                    <svg class="icon-stop" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <rect x="6" y="6" width="12" height="12" rx="2"/>
-                    </svg>
-                </button>
-            </div>
-        </form>
-    </main>
+		<!-- PromptInput: auto-grow textarea + toolbar + send/stop button -->
+		<form class="prompt-input" id="chat-form">
+			<div class="prompt-body">
+				<textarea id="message" rows="1" placeholder="Ask anything…"></textarea>
+			</div>
+			<div class="prompt-footer">
+				<div class="prompt-tools">
+					<select id="model" class="model-select" aria-label="Model">
+						<option value="llama3.2:3b">llama3.2:3b</option>
+						<option value="llava:7b">llava:7b</option>
+					</select>
+				</div>
+				<button id="send" type="submit" class="submit-btn" data-state="ready" aria-label="Send">
+					<svg class="icon-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+						stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M12 19V5" />
+						<path d="m5 12 7-7 7 7" />
+					</svg>
+					<svg class="icon-stop" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+						<rect x="6" y="6" width="12" height="12" rx="2" />
+					</svg>
+				</button>
+			</div>
+		</form>
+	</main>
 </body>
+
 </html>
