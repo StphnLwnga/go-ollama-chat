@@ -28,12 +28,115 @@ A real-time, streaming AI chat app: **Go** on the backend, a **local LLM via [Ol
 
 ## How it works
 
-```bash
-Browser  ──POST /chat──▶  Go server  ──stream:true──▶  Ollama
-         ◀──SSE tokens──              ◀──NDJSON chunks──
+The browser sends the whole conversation and a model ID. The Go server checks the model against its routing table, sends the conversation to the provider that serves that model, and relays each token to the browser over Server-Sent Events as it arrives. All model communication lives in the `ai` package, so handlers never know which provider answers.
+
+### Architecture
+
+```mermaid
+flowchart LR
+    subgraph Browser
+        page["Chat page<br/>index.html + chat.js"]
+    end
+
+    subgraph Server["Go server (net/http)"]
+        mux["ServeMux<br/>GET /<br/>POST /chat<br/>GET /models<br/>GET /history<br/>/static/"]
+        chat["Chat handler<br/>SSE stream"]
+        models["Models handler"]
+        history["History handler"]
+        db[("SQLite<br/>chat.db")]
+        subgraph AI["ai package"]
+            facade["Facade<br/>Chat, ChatStream,<br/>Supports, Models"]
+            router["Router<br/>model ID to provider"]
+            ollama["Ollama provider"]
+            groq["Groq provider"]
+        end
+    end
+
+    ollamaSrv["Ollama server<br/>local model"]
+    groqAPI["Groq API<br/>hosted models"]
+
+    page <-->|"requests, SSE tokens back"| mux
+    mux --> chat
+    mux --> models
+    mux --> history
+    chat --> facade
+    models --> facade
+    chat --> db
+    history --> db
+    facade --> router
+    router --> ollama
+    router --> groq
+    ollama -->|"HTTP, NDJSON stream"| ollamaSrv
+    groq -->|"HTTPS, SSE stream, Bearer key"| groqAPI
 ```
 
-The browser POSTs a message; the Go handler opens an SSE stream, requests a streaming completion from Ollama, and relays each token to the browser the instant it arrives. All LLM communication is isolated in the `ai/` package (`ai.Chat` / `ai.ChatStream`), so the provider can be swapped without touching any HTTP handler.
+### A chat message, step by step
+
+The model check happens before anything is saved or sent upstream, so a rejected request leaves no trace. Once the first token is sent, the HTTP status is already 200, so a later failure is reported inside the stream.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant B as Browser
+    participant H as Chat handler
+    participant DB as SQLite
+    participant R as Router
+    participant P as Provider (Ollama or Groq)
+    participant M as Model server
+
+    B->>H: POST /chat with model and messages
+    alt model is not in the routing table
+        H-->>B: 400 unknown model
+    else model is routable
+        H->>DB: save the user message
+        H->>R: ChatStream(model, messages)
+        R->>P: forward to the provider for this model
+        P->>M: streaming completion request
+        loop each token
+            M-->>P: chunk
+            P-->>H: token, through the callback
+            H-->>B: SSE event with the token, then flush
+        end
+        alt stream completed
+            H->>DB: save the assistant reply
+            H-->>B: SSE event DONE
+        else stream failed after it started
+            H-->>B: SSE event ERROR, status already 200
+        end
+    end
+```
+
+### Choosing the provider for a model
+
+Each model ID maps to exactly one provider, so the provider and the model can never disagree. Groq's models are registered only when `GROQ_API_KEY` is set; without it, the app runs with the local model only.
+
+```mermaid
+flowchart TD
+    req["Request with a model ID"] --> known{"In the routing table?"}
+    known -->|no| reject["400 unknown model<br/>nothing saved, no upstream call"]
+    known -->|yes| which{"Which provider is registered?"}
+    which -->|"llama3.2:3b"| ollama["Ollama provider<br/>local server"]
+    which -->|"openai/gpt-oss-20b<br/>openai/gpt-oss-120b<br/>qwen/qwen3.8-27b"| groq["Groq provider<br/>only when GROQ_API_KEY is set"]
+```
+
+### Loading the model list
+
+The page does not hard-code the models. It asks the server, which answers from the same routing table the chat handler uses. The template keeps one local option so the page still works if that request fails.
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant S as Go server
+    participant R as Router
+
+    B->>S: GET /
+    S-->>B: page with one fallback option, llama3.2:3b
+    B->>S: GET /models
+    S->>R: Models()
+    R-->>S: model IDs, sorted
+    S-->>B: JSON array of model IDs
+    Note over B: the model picker is rebuilt from the list
+```
 
 ## Prerequisites
 
