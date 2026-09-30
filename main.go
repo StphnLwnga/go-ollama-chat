@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -9,9 +11,15 @@ import (
 	"github.com/StphnLwnga/go-ollama-chat/config"
 	"github.com/StphnLwnga/go-ollama-chat/db"
 	"github.com/StphnLwnga/go-ollama-chat/handlers"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load .env if it exists. Variables already set in the environment win over the file.
+	if err := godotenv.Load(); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		log.Fatalf("reading .env: %v", err)
+	}
+
 	cfg, err := config.Load(os.LookupEnv)
 	if err != nil {
 		log.Fatalf("invalid configuration:\n%v", err)
