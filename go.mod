@@ -2,6 +2,8 @@ module github.com/StphnLwnga/go-ollama-chat
 
 go 1.25.0
 
+toolchain go1.26.8
+
 require modernc.org/sqlite v1.52.0
 
 require (
