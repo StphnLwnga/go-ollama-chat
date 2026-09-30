@@ -52,13 +52,16 @@ type streamChunk struct {
 	Done    bool    `json:"done"`
 }
 
+// Ollama implements the Provider interface
+type Ollama struct{}
+
 // - Public API ────────────────────────────────────────────────────────────────
 
 // Chat sends messages to Ollama and returns the complete response as a string.
 //
 // Use this for: summarizers, analyzers, document Q&A, anything where you
 // want the full answer before rendering it
-func Chat(model string, messages []Message) (string, error) {
+func (Ollama) Chat(model string, messages []Message) (string, error) {
 	body, err := json.Marshal(chatRequest{
 		Model:    model,
 		Messages: messages,
@@ -91,7 +94,7 @@ func Chat(model string, messages []Message) (string, error) {
 //
 // onChunk receives one token at a time. Return a non-nil error from onChunk
 // to abort the stream early (e.g. when the client disconnects).
-func ChatStream(model string, messages []Message, onChunk func(string) error) error {
+func (Ollama) ChatStream(model string, messages []Message, onChunk func(string) error) error {
 	body, err := json.Marshal(chatRequest{
 		Model:    model,
 		Messages: messages,

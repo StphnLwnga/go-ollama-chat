@@ -3,7 +3,9 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
+	"github.com/StphnLwnga/go-ollama-chat/ai"
 	"github.com/StphnLwnga/go-ollama-chat/db"
 	"github.com/StphnLwnga/go-ollama-chat/handlers"
 )
@@ -13,6 +15,16 @@ func main() {
 	if err := db.Open("chat.db"); err != nil {
 		log.Fatalf("could not open database: %v", err)
 	}
+
+	provider := os.Getenv("AI_PROVIDER")
+	if provider == "" {
+		provider = "ollama"
+	}
+	if provider == "groq" && os.Getenv("GROQ_API_KEY") == "" {
+		log.Fatalf("AI_PROVIDER=groq needs GROQ_API_KEY to be set")
+	}
+	ai.Init(provider, os.Getenv("GROQ_API_KEY"))
+	log.Printf("🚀 Using AI provider: %s", provider)
 
 	mux := http.NewServeMux()
 
