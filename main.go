@@ -32,7 +32,7 @@ func main() {
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	// Application routes — add yours here
-	mux.HandleFunc("/", handlers.Index)
+	mux.HandleFunc("GET /{$}", handlers.Index)
 	mux.HandleFunc("POST /chat", handlers.Chat)      // streaming chat endpoint
 	mux.HandleFunc("GET /history", handlers.History) // saved conversation (E6)
 
