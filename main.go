@@ -16,15 +16,20 @@ func main() {
 		log.Fatalf("could not open database: %v", err)
 	}
 
-	provider := os.Getenv("AI_PROVIDER")
-	if provider == "" {
-		provider = "ollama"
+	// Build the routing table: each model name maps to the provider that serves it.
+	router := ai.NewRouter()
+	router.Register(ai.Ollama{}, ai.DefaultModel)
+	if key := os.Getenv("GROQ_API_KEY"); key != "" {
+		router.Register(ai.Groq{APIKey: key},
+			"openai/gpt-oss-20b",
+			"openai/gpt-oss-120b",
+			"qwen/qwen3.8-27b",
+		)
+	} else {
+		log.Println("GROQ_API_KEY not set: Groq models are off")
 	}
-	if provider == "groq" && os.Getenv("GROQ_API_KEY") == "" {
-		log.Fatalf("AI_PROVIDER=groq needs GROQ_API_KEY to be set")
-	}
-	ai.Init(provider, os.Getenv("GROQ_API_KEY"))
-	log.Printf("🚀 Using AI provider: %s", provider)
+	ai.Use(router)
+	log.Printf("AI models: %v", router.Models())
 
 	mux := http.NewServeMux()
 
@@ -35,6 +40,7 @@ func main() {
 	mux.HandleFunc("GET /{$}", handlers.Index)
 	mux.HandleFunc("POST /chat", handlers.Chat)      // streaming chat endpoint
 	mux.HandleFunc("GET /history", handlers.History) // saved conversation (E6)
+	mux.HandleFunc("GET /models", handlers.Models)   // model names the router serves
 
 	log.Println("🚀 Server running → http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))

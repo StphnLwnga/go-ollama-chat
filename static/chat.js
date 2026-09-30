@@ -14,6 +14,16 @@ const scroll = document.getElementById("scroll");
 const scrollBtn = document.getElementById("scrollBtn");
 const empty = document.getElementById("empty");
 const modelSelect = document.getElementById("model"); // E5: model chosen at runtime
+// Fill the model picker from the server, so the page offers only models the server can route.
+fetch("/models")
+	.then((res) => {
+		if (!res.ok) throw new Error(`models: ${res.status}`);
+		return res.json();
+	})
+	.then((models) => {
+		modelSelect.replaceChildren(...models.map((name) => new Option(name, name)));
+	})
+	.catch((err) => console.error("could not load models", err));
 
 let isStreaming = false;
 let controller = null; // AbortController for the in-flight request
@@ -128,6 +138,8 @@ form.addEventListener("submit", async (e) => {
 			body: JSON.stringify({ model: modelSelect.value, messages: history }), // chosen model + WHOLE conversation
 			signal: controller.signal,
 		});
+
+		if (!res.ok) throw new Error((await res.text()).trim()); // e.g. 400 unknown model
 
 		const reader = res.body.getReader();
 		const decoder = new TextDecoder();

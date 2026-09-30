@@ -37,6 +37,12 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 		model = ai.DefaultModel
 	}
 
+	// Reject models the server cannot route, before any side effect or upstream call.
+	if !ai.Supports(model) {
+		http.Error(w, fmt.Sprintf("unknown model %q", model), http.StatusBadRequest)
+		return
+	}
+
 	// 2. Set SSE headers ────────────────────────────────────────────────
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
