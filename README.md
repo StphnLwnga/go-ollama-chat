@@ -169,6 +169,16 @@ Settings come from three places, highest priority first:
 
 A missing `.env` file is fine. A `.env` file that exists but cannot be read stops the app with the reason. The startup log prints the loaded settings with the Groq key shown as `[redacted]`.
 
+## HTTP routes
+
+| Route          | What it does                                                                   |
+|----------------|--------------------------------------------------------------------------------|
+| `GET /`        | The chat page                                                                  |
+| `POST /chat`   | Streams a reply to the conversation as Server-Sent Events; `400` for an unknown model |
+| `GET /models`  | The model IDs the router can serve, as a JSON array                            |
+| `GET /history` | The saved conversation, as JSON                                                |
+| `/static/`     | CSS and JavaScript files                                                       |
+
 ## Measured results
 
 Same prompt, three runs each, measured on 2026-09-29. Local runs used an Apple M4 with 16 GB of memory; Groq runs on Groq's own hardware.
