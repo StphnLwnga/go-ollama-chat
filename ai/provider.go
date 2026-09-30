@@ -7,21 +7,30 @@ type Provider interface {
 	ChatStream(model string, messages []Message, onChunk func(string) error) error
 }
 
-var current Provider = Ollama{} // default until Init says otherwise
+// routes is the router built at startup. It is empty until Use is called.
+var routes = NewRouter()
 
-// Init picks the AI provider=ollama|groq
-func Init(provider, groqKey string) {
-	if provider == "groq" {
-		current = Groq{APIKey: groqKey}
-	}
+// Use installs the router built in main. Call it once, before the server starts.
+func Use(r *Router) {
+	routes = r
 }
 
-// Chat uses whatever provider was selected in Init
+// Supports reports whether any provider serves the model.
+func Supports(model string) bool {
+	return routes.Supports(model)
+}
+
+// Models returns the model names the server can serve, sorted.
+func Models() []string {
+	return routes.Models()
+}
+
+// Chat sends the request to the provider for this model.
 func Chat(model string, messages []Message) (string, error) {
-	return current.Chat(model, messages)
+	return routes.Chat(model, messages)
 }
 
-// ChatStream uses whatever provider was selected in Init
+// ChatStream sends the request to the provider for this model.
 func ChatStream(model string, messages []Message, onChunk func(string) error) error {
-	return current.ChatStream(model, messages, onChunk)
+	return routes.ChatStream(model, messages, onChunk)
 }

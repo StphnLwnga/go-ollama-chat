@@ -12,7 +12,7 @@ A real-time, streaming AI chat app: **Go** on the backend, a **local LLM via [Ol
 - **Polished chat UI**: auto-growing prompt box, role-based message bubbles, auto-scroll, and a scroll-to-bottom control.
 - **Markdown rendering**: assistant replies render as formatted markdown (code blocks, lists) once complete, sanitized against XSS (via `marked` + `DOMPurify`).
 - **Stop generation**: cancel a streaming reply mid-flight (browser `AbortController` → the server stops cleanly).
-- **Local and private by default**: with Ollama, prompts never leave your machine and no API key is needed. Groq is an optional hosted provider (see "Choosing the AI provider").
+- **Local and private by default**: with Ollama, prompts never leave your machine and no API key is needed. Groq is an optional hosted provider (see "Models and providers").
 - **Persistent**: conversations are saved to SQLite and restored on refresh.
 - **Lean backend**: Go standard library plus one pure-Go SQLite driver (no CGO, no C toolchain).
 
@@ -21,7 +21,7 @@ A real-time, streaming AI chat app: **Go** on the backend, a **local LLM via [Ol
 | Layer     | Tech                            |
 |-----------|---------------------------------|
 | Backend   | Go (`net/http`, stdlib)         |
-| LLM       | Ollama (`llama3.2:3b` default)  |
+| LLM       | Ollama (`llama3.2:3b`, local) and Groq (optional, hosted), routed by model |
 | Transport | Server-Sent Events (SSE)        |
 | Storage   | SQLite (pure-Go `modernc.org/sqlite`) |
 | Frontend  | Vanilla JS + CSS                |
@@ -54,21 +54,23 @@ make run            # or: go run main.go
 # → http://localhost:8080
 ```
 
-## Choosing the AI provider
+## Models and providers
 
-The app uses a local Ollama model by default. To use [Groq](https://groq.com) instead, set two environment variables:
+Each message goes to the provider that serves its model, through a routing table built at startup.
 
-| Variable       | Value                                                   |
-|----------------|---------------------------------------------------------|
-| `AI_PROVIDER`  | `ollama` (default) or `groq`                            |
-| `GROQ_API_KEY` | your Groq API key; required when `AI_PROVIDER=groq`     |
+| Models                                                          | Provider                           | Available                     |
+|-----------------------------------------------------------------|------------------------------------|-------------------------------|
+| `llama3.2:3b`                                                   | Ollama (local)                     | always                        |
+| `openai/gpt-oss-20b`, `openai/gpt-oss-120b`, `qwen/qwen3.8-27b` | [Groq](https://groq.com) (hosted)  | when `GROQ_API_KEY` is set    |
 
-With `AI_PROVIDER=groq` and no key, the app refuses to start and says why.
+Without `GROQ_API_KEY`, the app starts with the local model only and logs that Groq is off.
+
+`GET /models` returns the available model names as JSON, and the page builds its model list from it. A message for a model that is not in the table gets a `400` before anything is saved or sent to a provider.
 
 The app does not read `.env` yet, so load it into the shell first:
 
 ```bash
-set -a; . ./.env; set +a; AI_PROVIDER=groq go run .
+set -a; . ./.env; set +a; go run .
 ```
 
 The models Groq offers depend on the account. To list the models your key can use:
@@ -77,7 +79,7 @@ The models Groq offers depend on the account. To list the models your key can us
 curl -s https://api.groq.com/openai/v1/models -H "Authorization: Bearer $GROQ_API_KEY"
 ```
 
-**Known limitation:** the provider is chosen once per process, but the model is chosen per message. The model in the dropdown must match the running provider: a local model name sent to Groq returns a 404. The planned fix is to route each message to a provider by its model name.
+A new Groq model must also be added to the routing table in `main.go` before the app sends messages to it.
 
 ## Measured results
 
@@ -102,12 +104,14 @@ curl -s -N -o /dev/null -X POST localhost:8080/chat -H 'Content-Type: applicatio
 
 ```bash
 main.go                HTTP server + route registration
-ai/provider.go         Provider interface + startup selection; handlers call only this package
+ai/provider.go         Provider interface + package facade; handlers call only this package
+ai/router.go           Routing table: sends each model to the provider that serves it
 ai/ollama.go           Ollama provider (local)
 ai/groq.go             Groq provider (hosted, needs GROQ_API_KEY)
 db/db.go               SQLite persistence: saves and loads the conversation
 handlers/chat.go       The SSE streaming chat endpoint
 handlers/history.go    Serves the saved conversation as JSON
+handlers/models.go     Serves the available model names as JSON
 handlers/handlers.go   Page handler
 templates/index.html   Chat UI
 static/                style.css + chat.js
