@@ -5,7 +5,6 @@
 ## Docs
 
 - [ ] README updated in this PR for any change to routes, settings, packages, behavior or measurements
-- [ ] The How it works diagrams still match the code, or are updated in this PR
 - [ ] No docs change needed, because:
 
 ## Checklist
