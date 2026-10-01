@@ -167,7 +167,7 @@ Settings come from three places, highest priority first:
 2. A `.env` file in the working directory, loaded at startup if it exists (copy `.env.example`)
 3. The defaults above
 
-A missing `.env` file is fine. A `.env` file that exists but cannot be read stops the app with the reason. The startup log prints the loaded settings with the Groq key shown as `[redacted]`.
+A missing `.env` file is fine. A `.env` file that exists but cannot be read stops the app with the reason. The startup log prints the loaded settings, with the Groq key shown as `[redacted]`, or `[not set]` when it is empty.
 
 ## HTTP routes
 
@@ -203,6 +203,7 @@ curl -s -N -o /dev/null -X POST localhost:8080/chat -H 'Content-Type: applicatio
 ```bash
 main.go                Startup: loads .env and settings, builds the router, registers routes
 config/config.go       Settings: loaded once at startup, with defaults, validation and a redacted secret type
+readme_test.go         Fails CI when the README misses a setting, route or package
 ai/provider.go         Provider interface + package facade; handlers call only this package
 ai/router.go           Routing table: sends each model to the provider that serves it
 ai/ollama.go           Ollama provider (local)
