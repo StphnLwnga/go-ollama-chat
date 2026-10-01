@@ -82,6 +82,20 @@ func TestLoadReportsEveryInvalidSetting(t *testing.T) {
 	}
 }
 
+// TestEmptySecretPrintsNotSet verifies that Load reports empty secrets as [not set]
+func TestEmptySecretPrintsNotSet(t *testing.T) {
+	t.Parallel()
+	cfg, err := Load(env(nil))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	for _, verb := range []string{"%v", "%#v"} {
+		if got := fmt.Sprintf(verb, cfg.GroqAPIKey); got != "[not set]" {
+			t.Errorf("%s printed %q, want %q", verb, got, "[not set]")
+		}
+	}
+}
+
 // TestSecretIsRedactedWhenPrinted verifies that Load redacts the secret when printed
 func TestSecretIsRedactedWhenPrinted(t *testing.T) {
 	t.Parallel()

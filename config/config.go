@@ -10,8 +10,16 @@ import (
 // Secret holds a sensitive value. It prints as [redacted], so it cannot leak through logs.
 type Secret string
 
-func (Secret) String() string   { return "[redacted]" }
-func (Secret) GoString() string { return "[redacted]" }
+// String implements fmt.Stringer and prints [not set] when the key is missing.
+func (s Secret) String() string {
+	if s == "" {
+		return "[not set]"
+	}
+	return "[redacted]"
+}
+
+// GoString implements fmt.GoStringer and prints the key in tests.
+func (s Secret) GoString() string { return s.String() }
 
 // Config holds every setting the app reads, already parsed into its real type.
 type Config struct {
