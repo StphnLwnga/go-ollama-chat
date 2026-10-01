@@ -24,7 +24,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("invalid configuration:\n%v", err)
 	}
-	log.Printf("config: %+v", cfg) // the Groq key prints as [redacted]
+	log.Printf("config: %+v", cfg) // the Groq key prints as [redacted], or [not set] when empty
 
 	// Open (or create) the SQLite file the conversation is persisted to.
 	if err := db.Open(cfg.DBPath); err != nil {

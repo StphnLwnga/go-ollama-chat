@@ -3,11 +3,12 @@ package config
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"strconv"
 )
 
-// Secret holds a sensitive value. It prints as [redacted], so it cannot leak through logs.
+// Secret holds a sensitive value. It prints as [redacted], or [not set] when empty, under every fmt verb.
 type Secret string
 
 // String implements fmt.Stringer and prints [not set] when the key is missing.
@@ -18,8 +19,10 @@ func (s Secret) String() string {
 	return "[redacted]"
 }
 
-// GoString implements fmt.GoStringer and prints the key in tests.
-func (s Secret) GoString() string { return s.String() }
+// Format implements fmt.Formatter, so every verb, including %d and %x, prints the placeholder.
+func (s Secret) Format(f fmt.State, verb rune) {
+	io.WriteString(f, s.String())
+}
 
 // Config holds every setting the app reads, already parsed into its real type.
 type Config struct {

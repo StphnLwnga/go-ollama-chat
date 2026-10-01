@@ -89,7 +89,7 @@ func TestEmptySecretPrintsNotSet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	for _, verb := range []string{"%v", "%#v"} {
+	for _, verb := range []string{"%v", "%+v", "%#v", "%s", "%q", "%x", "%d", "%t"} {
 		if got := fmt.Sprintf(verb, cfg.GroqAPIKey); got != "[not set]" {
 			t.Errorf("%s printed %q, want %q", verb, got, "[not set]")
 		}
@@ -103,9 +103,12 @@ func TestSecretIsRedactedWhenPrinted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	for _, verb := range []string{"%v", "%+v", "%#v", "%s"} {
+	for _, verb := range []string{"%v", "%+v", "%#v", "%s", "%q", "%x", "%d", "%t"} {
 		if out := fmt.Sprintf(verb, cfg); strings.Contains(out, "gsk-real-key") {
 			t.Errorf("%s printed the key: %s", verb, out)
+		}
+		if got := fmt.Sprintf(verb, cfg.GroqAPIKey); got != "[redacted]" {
+			t.Errorf("%s printed %q for a set key, want %q", verb, got, "[redacted]")
 		}
 	}
 	if string(cfg.GroqAPIKey) != "gsk-real-key" {
