@@ -17,15 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-)
-
-const (
-	// DefaultModel is the model used when callers don't specify one.
-	// Students with 16GB+ RAM can swap this for llama3.1:8b.
-	DefaultModel = "llama3.2:3b"
-
-	ollamaBaseURL = "http://localhost:11434"
-	chatEndpoint  = ollamaBaseURL + "/api/chat"
+	"net/url"
 )
 
 // Message is a single turn in a conversation.
@@ -52,8 +44,15 @@ type streamChunk struct {
 	Done    bool    `json:"done"`
 }
 
-// Ollama implements the Provider interface
-type Ollama struct{}
+// Ollama implements the Provider interface for an Ollama server.
+type Ollama struct {
+	BaseURL *url.URL // for example http://localhost:11434
+}
+
+// chatURL is the chat endpoint under the configured base URL.
+func (o Ollama) chatURL() string {
+	return o.BaseURL.JoinPath("api", "chat").String()
+}
 
 // - Public API ────────────────────────────────────────────────────────────────
 
@@ -61,7 +60,7 @@ type Ollama struct{}
 //
 // Use this for: summarizers, analyzers, document Q&A, anything where you
 // want the full answer before rendering it
-func (Ollama) Chat(model string, messages []Message) (string, error) {
+func (o Ollama) Chat(model string, messages []Message) (string, error) {
 	body, err := json.Marshal(chatRequest{
 		Model:    model,
 		Messages: messages,
@@ -71,7 +70,7 @@ func (Ollama) Chat(model string, messages []Message) (string, error) {
 		return "", fmt.Errorf("ai: marshal request: %w", err)
 	}
 
-	resp, err := http.Post(chatEndpoint, "application/json", bytes.NewReader(body))
+	resp, err := http.Post(o.chatURL(), "application/json", bytes.NewReader(body))
 	if err != nil {
 		return "", fmt.Errorf("ai: ollama unreachable — is `ollama serve` running? %w", err)
 	}
@@ -94,7 +93,7 @@ func (Ollama) Chat(model string, messages []Message) (string, error) {
 //
 // onChunk receives one token at a time. Return a non-nil error from onChunk
 // to abort the stream early (e.g. when the client disconnects).
-func (Ollama) ChatStream(model string, messages []Message, onChunk func(string) error) error {
+func (o Ollama) ChatStream(model string, messages []Message, onChunk func(string) error) error {
 	body, err := json.Marshal(chatRequest{
 		Model:    model,
 		Messages: messages,
@@ -104,7 +103,7 @@ func (Ollama) ChatStream(model string, messages []Message, onChunk func(string) 
 		return fmt.Errorf("ai: marshal request: %w", err)
 	}
 
-	resp, err := http.Post(chatEndpoint, "application/json", bytes.NewReader(body))
+	resp, err := http.Post(o.chatURL(), "application/json", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("ai: ollama unreachable — is `ollama serve` running? %w", err)
 	}

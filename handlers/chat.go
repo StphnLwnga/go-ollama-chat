@@ -32,10 +32,7 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fall back to the default if the client didn't send a model.
-	model := req.Model
-	if model == "" {
-		model = ai.DefaultModel
-	}
+	model := req.Model // required: the allowlist check below rejects an empty or unknown model
 
 	// Reject models the server cannot route, before any side effect or upstream call.
 	if !ai.Supports(model) {

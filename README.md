@@ -2,7 +2,7 @@
 
 A real-time, streaming AI chat app: **Go** on the backend, a **local LLM via [Ollama](https://ollama.com)** for inference, and a dependency-light frontend. Replies stream into the browser token-by-token over Server-Sent Events. Runs fully local and private by default. Groq is optional.
 
-![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go&logoColor=white)
+![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go&logoColor=white)
 ![Ollama](https://img.shields.io/badge/LLM-Ollama%20(local)-000000)
 ![SQLite](https://img.shields.io/badge/storage-SQLite-003B57?logo=sqlite&logoColor=white)
 
@@ -106,41 +106,9 @@ sequenceDiagram
     end
 ```
 
-### Choosing the provider for a model
-
-Each model ID maps to exactly one provider, so the provider and the model can never disagree. Groq's models are registered only when `GROQ_API_KEY` is set; without it, the app runs with the local model only.
-
-```mermaid
-flowchart TD
-    req["Request with a model ID"] --> known{"In the routing table?"}
-    known -->|no| reject["400 unknown model<br/>nothing saved, no upstream call"]
-    known -->|yes| which{"Which provider is registered?"}
-    which -->|"llama3.2:3b"| ollama["Ollama provider<br/>local server"]
-    which -->|"openai/gpt-oss-20b<br/>openai/gpt-oss-120b<br/>qwen/qwen3.8-27b"| groq["Groq provider<br/>only when GROQ_API_KEY is set"]
-```
-
-### Loading the model list
-
-The page does not hard-code the models. It asks the server, which answers from the same routing table the chat handler uses. The template keeps one local option so the page still works if that request fails.
-
-```mermaid
-sequenceDiagram
-    participant B as Browser
-    participant S as Go server
-    participant R as Router
-
-    B->>S: GET /
-    S-->>B: page with one fallback option, llama3.2:3b
-    B->>S: GET /models
-    S->>R: Models()
-    R-->>S: model IDs, sorted
-    S-->>B: JSON array of model IDs
-    Note over B: the model picker is rebuilt from the list
-```
-
 ## Prerequisites
 
-- [Go 1.22+](https://go.dev/dl/)
+- [Go 1.25+](https://go.dev/dl/)
 - [Ollama](https://ollama.com), running locally
 
 ## Quick start
@@ -152,8 +120,11 @@ cd go-ollama-chat
 # Pull the default model (first run only, ~2 GB)
 ollama pull llama3.2:3b
 
+# Optional: copy the example settings (add GROQ_API_KEY for hosted models)
+cp .env.example .env
+
 # Run
-make run            # or: go run main.go
+make run            # or: go run .
 # → http://localhost:8080
 ```
 
@@ -163,18 +134,12 @@ Each message goes to the provider that serves its model, through a routing table
 
 | Models                                                          | Provider                           | Available                     |
 |-----------------------------------------------------------------|------------------------------------|-------------------------------|
-| `llama3.2:3b`                                                   | Ollama (local)                     | always                        |
+| `OLLAMA_MODEL` (default `llama3.2:3b`)                          | Ollama (local)                     | always                        |
 | `openai/gpt-oss-20b`, `openai/gpt-oss-120b`, `qwen/qwen3.8-27b` | [Groq](https://groq.com) (hosted)  | when `GROQ_API_KEY` is set    |
 
 Without `GROQ_API_KEY`, the app starts with the local model only and logs that Groq is off.
 
 `GET /models` returns the available model names as JSON, and the page builds its model list from it. A message for a model that is not in the table gets a `400` before anything is saved or sent to a provider.
-
-The app does not read `.env` yet, so load it into the shell first:
-
-```bash
-set -a; . ./.env; set +a; go run .
-```
 
 The models Groq offers depend on the account. To list the models your key can use:
 
@@ -183,6 +148,36 @@ curl -s https://api.groq.com/openai/v1/models -H "Authorization: Bearer $GROQ_AP
 ```
 
 A new Groq model must also be added to the routing table in `main.go` before the app sends messages to it.
+
+## Configuration
+
+The app reads its settings once, at startup. If any setting is invalid, it stops and lists every invalid setting at once.
+
+| Setting           | Default                   | Rule                                                        |
+|-------------------|---------------------------|-------------------------------------------------------------|
+| `PORT`            | `8080`                    | a number from 1 to 65535                                    |
+| `DB_PATH`         | `chat.db`                 | must not be empty                                           |
+| `OLLAMA_BASE_URL` | `http://localhost:11434`  | an `http` or `https` URL with a host                        |
+| `OLLAMA_MODEL`    | `llama3.2:3b`             | must not be empty; the local model the router serves        |
+| `GROQ_API_KEY`    | none                      | optional; adds Groq's models when set; never printed in logs |
+
+Settings come from three places, highest priority first:
+
+1. Environment variables set in the shell, for example `PORT=9090 go run .`
+2. A `.env` file in the working directory, loaded at startup if it exists (copy `.env.example`)
+3. The defaults above
+
+A missing `.env` file is fine. A `.env` file that exists but cannot be read stops the app with the reason. The startup log prints the loaded settings, with the Groq key shown as `[redacted]`, or `[not set]` when it is empty.
+
+## HTTP routes
+
+| Route          | What it does                                                                   |
+|----------------|--------------------------------------------------------------------------------|
+| `GET /`        | The chat page                                                                  |
+| `POST /chat`   | Streams a reply to the conversation as Server-Sent Events; `400` for an unknown model |
+| `GET /models`  | The model IDs the router can serve, as a JSON array                            |
+| `GET /history` | The saved conversation, as JSON                                                |
+| `/static/`     | CSS and JavaScript files                                                       |
 
 ## Measured results
 
@@ -206,7 +201,9 @@ curl -s -N -o /dev/null -X POST localhost:8080/chat -H 'Content-Type: applicatio
 ## Project layout
 
 ```bash
-main.go                HTTP server + route registration
+main.go                Startup: loads .env and settings, builds the router, registers routes
+config/config.go       Settings: loaded once at startup, with defaults, validation and a redacted secret type
+readme_test.go         Fails CI when the README misses a setting, route or package
 ai/provider.go         Provider interface + package facade; handlers call only this package
 ai/router.go           Routing table: sends each model to the provider that serves it
 ai/ollama.go           Ollama provider (local)
