@@ -48,15 +48,28 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// Static files like CSS, JS, images served from ./static/
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-
-	// Application routes — add yours here
-	mux.HandleFunc("GET /{$}", handlers.Index)
-	mux.HandleFunc("POST /chat", handlers.Chat)      // streaming chat endpoint
-	mux.HandleFunc("GET /history", handlers.History) // saved conversation (E6)
-	mux.HandleFunc("GET /models", handlers.Models)   // model names the router serves
+	// Install HTTP routes defined in routes()
+	for _, r := range routes() {
+		mux.Handle(r.pattern, r.handler)
+	}
 
 	log.Printf("🚀 Server running → http://localhost%s", cfg.Addr())
 	log.Fatal(http.ListenAndServe(cfg.Addr(), mux))
+}
+
+// route is one HTTP route: a ServeMux pattern and its handler.
+type route struct {
+	pattern string
+	handler http.Handler
+}
+
+// routes lists every HTTP route the server registers. The docs test reads it too.
+func routes() []route {
+	return []route{
+		{"GET /{$}", http.HandlerFunc(handlers.Index)},
+		{"POST /chat", http.HandlerFunc(handlers.Chat)},
+		{"GET /history", http.HandlerFunc(handlers.History)},
+		{"GET /models", http.HandlerFunc(handlers.Models)},
+		{"/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static")))},
+	}
 }
