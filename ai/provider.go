@@ -6,6 +6,8 @@ import "context"
 // they keep calling the package functions below
 type Provider interface {
 	Chat(ctx context.Context, model string, messages []Message) (string, error)
+	// ChatStream calls onChunk once per token. It stops early, with a non-nil error,
+	// when ctx is cancelled or when onChunk fails. An error from onChunk is returned unchanged.
 	ChatStream(ctx context.Context, model string, messages []Message, onChunk func(string) error) error
 }
 

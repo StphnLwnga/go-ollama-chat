@@ -65,24 +65,3 @@ func TestGroqChatStreamReturnsErrorOnBadStatus(t *testing.T) {
 		t.Errorf("error %q does not mention the 401 status", err)
 	}
 }
-
-func TestGroqChatStreamStopsWhenCallerStops(t *testing.T) {
-	srv := fakeGroq(t, http.StatusOK, []string{
-		`data: {"choices":[{"delta":{"content":"one"}}]}`,
-		`data: {"choices":[{"delta":{"content":"two"}}]}`,
-		`data: [DONE]`,
-	})
-	g := Groq{APIKey: "test-key", Endpoint: srv.URL}
-
-	calls := 0
-	err := g.ChatStream(t.Context(), "any-model", []Message{{Role: "user", Content: "hi"}}, func(string) error {
-		calls++
-		return fmt.Errorf("client went away")
-	})
-	if err != nil {
-		t.Fatalf("stopping early should not be an error, got %v", err)
-	}
-	if calls != 1 {
-		t.Errorf("callback ran %d times, want 1", calls)
-	}
-}

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,6 +11,9 @@ import (
 	"github.com/StphnLwnga/go-ollama-chat/ai"
 	"github.com/StphnLwnga/go-ollama-chat/db"
 )
+
+// errClientGone marks a failed write to the browser: the client closed the connection.
+var errClientGone = errors.New("client disconnected")
 
 // Chat streams an AI response to the browser token-by-token using
 // Server-Sent Events (SSE), using the whole conversation as context.
@@ -73,11 +77,17 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		if _, err := fmt.Fprintf(w, "data: %s\n\n", payload); err != nil {
-			return err // browser disconnected — return error to stop the stream
+			return fmt.Errorf("%w: %w", errClientGone, err) // stops the stream
 		}
 		flusher.Flush() // push this token out immediately
 		return nil
 	})
+	if r.Context().Err() != nil || errors.Is(err, errClientGone) {
+		// The client left. That is not a server error, and nobody is there to read [ERROR].
+		// The reply is cut off, so it is not saved as a complete answer.
+		log.Printf("chat: client left after %d bytes of reply", reply.Len())
+		return
+	}
 	if err != nil {
 		log.Printf("chat: stream error: %v", err)
 		fmt.Fprint(w, "data: \"[ERROR]\"\n\n")

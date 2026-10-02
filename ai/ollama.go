@@ -104,7 +104,7 @@ func (o Ollama) Chat(ctx context.Context, model string, messages []Message) (str
 // from real-time output in the browser.
 //
 // onChunk receives one token at a time. Return a non-nil error from onChunk
-// to abort the stream early (e.g. when the client disconnects).
+// to stop the stream early; ChatStream then returns that error.
 func (o Ollama) ChatStream(ctx context.Context, model string, messages []Message, onChunk func(string) error) error {
 	resp, err := o.post(ctx, model, messages, true)
 	if err != nil {
@@ -122,8 +122,7 @@ func (o Ollama) ChatStream(ctx context.Context, model string, messages []Message
 
 		if chunk.Message.Content != "" {
 			if err := onChunk(chunk.Message.Content); err != nil {
-				// Caller wants to stop the stream early (e.g. client disconnected): normal, not an error
-				return nil
+				return err // the stream did not finish; the caller decides what that means
 			}
 		}
 

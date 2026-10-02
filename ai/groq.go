@@ -120,7 +120,7 @@ func (g Groq) ChatStream(ctx context.Context, model string, messages []Message, 
 		token := chunk.Choices[0].Delta.Content
 		if token != "" {
 			if err := onChunk(token); err != nil {
-				return nil // client disconnected: normal, not an error
+				return err // the stream did not finish; the caller decides what that means
 			}
 		}
 	}
