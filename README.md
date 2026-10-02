@@ -14,7 +14,7 @@ A real-time, streaming AI chat app: **Go** on the backend, a **local LLM via [Ol
 - **Stop generation**: cancel a streaming reply mid-flight (browser `AbortController` → the server stops cleanly).
 - **Local and private by default**: with Ollama, prompts never leave your machine and no API key is needed. Groq is an optional hosted provider (see "Models and providers").
 - **Persistent**: conversations are saved to SQLite and restored on refresh.
-- **Lean backend**: Go standard library plus one pure-Go SQLite driver (no CGO, no C toolchain).
+- **Lean backend**: Go standard library plus two small dependencies: a pure-Go SQLite driver (no CGO, no C toolchain) and godotenv for the optional `.env` file.
 
 ## Stack
 
