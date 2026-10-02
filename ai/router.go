@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"maps"
@@ -51,19 +52,19 @@ func (r *Router) resolve(model string) (Provider, error) {
 }
 
 // Chat sends the request to the provider for this model.
-func (r *Router) Chat(model string, messages []Message) (string, error) {
+func (r *Router) Chat(ctx context.Context, model string, messages []Message) (string, error) {
 	p, err := r.resolve(model)
 	if err != nil {
 		return "", err
 	}
-	return p.Chat(model, messages)
+	return p.Chat(ctx, model, messages)
 }
 
 // ChatStream sends the request to the provider for this model.
-func (r *Router) ChatStream(model string, messages []Message, onChunk func(string) error) error {
+func (r *Router) ChatStream(ctx context.Context, model string, messages []Message, onChunk func(string) error) error {
 	p, err := r.resolve(model)
 	if err != nil {
 		return err
 	}
-	return p.ChatStream(model, messages, onChunk)
+	return p.ChatStream(ctx, model, messages, onChunk)
 }

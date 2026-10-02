@@ -3,6 +3,7 @@ package ai
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,8 +15,9 @@ const groqEndpoint = "https://api.groq.com/openai/v1/chat/completions"
 
 // Groq implements the Provider interface
 type Groq struct {
-	APIKey   string
-	Endpoint string
+	APIKey     string
+	Endpoint   string
+	HTTPClient *http.Client // nil means a client with default timeouts
 }
 
 type groqText struct {
@@ -42,7 +44,7 @@ type groqResponse struct {
 // 	TotalTokens int `json:"total_tokens"`
 // }
 
-func (g Groq) post(model string, messages []Message, stream bool) (*http.Response, error) {
+func (g Groq) post(ctx context.Context, model string, messages []Message, stream bool) (*http.Response, error) {
 	body, err := json.Marshal(chatRequest{Model: model, Messages: messages, Stream: stream})
 	if err != nil {
 		return nil, fmt.Errorf("ai: marshal request: %w", err)
@@ -53,7 +55,7 @@ func (g Groq) post(model string, messages []Message, stream bool) (*http.Respons
 		url = groqEndpoint
 	}
 
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("ai: build request: %w", err)
 	}
@@ -61,9 +63,9 @@ func (g Groq) post(model string, messages []Message, stream bool) (*http.Respons
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+g.APIKey)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := clientOrDefault(g.HTTPClient).Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("ai: groq unreachable: %w", err)
+		return nil, fmt.Errorf("ai: groq request: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		defer resp.Body.Close()
@@ -74,8 +76,8 @@ func (g Groq) post(model string, messages []Message, stream bool) (*http.Respons
 	return resp, nil
 }
 
-func (g Groq) Chat(model string, messages []Message) (string, error) {
-	resp, err := g.post(model, messages, false)
+func (g Groq) Chat(ctx context.Context, model string, messages []Message) (string, error) {
+	resp, err := g.post(ctx, model, messages, false)
 	if err != nil {
 		return "", err
 	}
@@ -91,8 +93,8 @@ func (g Groq) Chat(model string, messages []Message) (string, error) {
 	return out.Choices[0].Message.Content, nil
 }
 
-func (g Groq) ChatStream(model string, messages []Message, onChunk func(string) error) error {
-	resp, err := g.post(model, messages, true)
+func (g Groq) ChatStream(ctx context.Context, model string, messages []Message, onChunk func(string) error) error {
+	resp, err := g.post(ctx, model, messages, true)
 	if err != nil {
 		return err
 	}
@@ -119,7 +121,7 @@ func (g Groq) ChatStream(model string, messages []Message, onChunk func(string) 
 		token := chunk.Choices[0].Delta.Content
 		if token != "" {
 			if err := onChunk(token); err != nil {
-				return nil // client disconnected: normal, not an error
+				return err // the stream did not finish; the caller decides what that means
 			}
 		}
 	}
