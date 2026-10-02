@@ -43,7 +43,7 @@ type groqResponse struct {
 // 	TotalTokens int `json:"total_tokens"`
 // }
 
-func (g Groq) post(model string, messages []Message, stream bool) (*http.Response, error) {
+func (g Groq) post(ctx context.Context, model string, messages []Message, stream bool) (*http.Response, error) {
 	body, err := json.Marshal(chatRequest{Model: model, Messages: messages, Stream: stream})
 	if err != nil {
 		return nil, fmt.Errorf("ai: marshal request: %w", err)
@@ -54,7 +54,7 @@ func (g Groq) post(model string, messages []Message, stream bool) (*http.Respons
 		url = groqEndpoint
 	}
 
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("ai: build request: %w", err)
 	}
@@ -64,7 +64,7 @@ func (g Groq) post(model string, messages []Message, stream bool) (*http.Respons
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("ai: groq unreachable: %w", err)
+		return nil, fmt.Errorf("ai: groq request: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		defer resp.Body.Close()
@@ -76,7 +76,7 @@ func (g Groq) post(model string, messages []Message, stream bool) (*http.Respons
 }
 
 func (g Groq) Chat(ctx context.Context, model string, messages []Message) (string, error) {
-	resp, err := g.post(model, messages, false)
+	resp, err := g.post(ctx, model, messages, false)
 	if err != nil {
 		return "", err
 	}
@@ -93,7 +93,7 @@ func (g Groq) Chat(ctx context.Context, model string, messages []Message) (strin
 }
 
 func (g Groq) ChatStream(ctx context.Context, model string, messages []Message, onChunk func(string) error) error {
-	resp, err := g.post(model, messages, true)
+	resp, err := g.post(ctx, model, messages, true)
 	if err != nil {
 		return err
 	}
