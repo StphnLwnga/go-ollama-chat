@@ -47,7 +47,8 @@ type streamChunk struct {
 
 // Ollama implements the Provider interface for an Ollama server.
 type Ollama struct {
-	BaseURL *url.URL // for example http://localhost:11434
+	BaseURL    *url.URL     // for example http://localhost:11434
+	HTTPClient *http.Client // nil means a client with default timeouts
 }
 
 // chatURL is the chat endpoint under the configured base URL.
@@ -68,7 +69,7 @@ func (o Ollama) post(ctx context.Context, model string, messages []Message, stre
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := clientOrDefault(o.HTTPClient).Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("ai: ollama request: %w", err)
 	}

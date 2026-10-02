@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -13,26 +14,26 @@ import (
 
 // providerCase is one provider under contract test.
 type providerCase struct {
-	newProvider func(t *testing.T, endpoint string) Provider // builds the provider against a fake server
-	twoTokens   string                                       // a streamed reply of two tokens, in the provider's wire format
+	newProvider func(t *testing.T, endpoint string, client *http.Client) Provider // builds the provider against a fake server
+	twoTokens   string                                                            // a streamed reply of two tokens, in the provider's wire format
 }
 
 // providerCases lists every provider. Every contract test runs against all of them.
 var providerCases = map[string]providerCase{
 	"ollama": {
-		newProvider: func(t *testing.T, endpoint string) Provider {
+		newProvider: func(t *testing.T, endpoint string, client *http.Client) Provider {
 			u, err := url.Parse(endpoint)
 			if err != nil {
 				t.Fatal(err)
 			}
-			return Ollama{BaseURL: u}
+			return Ollama{BaseURL: u, HTTPClient: client}
 		},
 		twoTokens: `{"message":{"role":"assistant","content":"one"},"done":false}` + "\n" +
 			`{"message":{"role":"assistant","content":"two"},"done":true}` + "\n",
 	},
 	"groq": {
-		newProvider: func(t *testing.T, endpoint string) Provider {
-			return Groq{APIKey: "test-key", Endpoint: endpoint}
+		newProvider: func(t *testing.T, endpoint string, client *http.Client) Provider {
+			return Groq{APIKey: "test-key", Endpoint: endpoint, HTTPClient: client}
 		},
 		twoTokens: `data: {"choices":[{"delta":{"content":"one"}}]}` + "\n\n" +
 			`data: {"choices":[{"delta":{"content":"two"}}]}` + "\n\n" +
@@ -75,7 +76,7 @@ func TestProvidersStopWhenContextIsCancelled(t *testing.T) {
 					cancel()
 				}()
 
-				err := call(ctx, pc.newProvider(t, srv.URL))
+				err := call(ctx, pc.newProvider(t, srv.URL, nil))
 				if !errors.Is(err, context.Canceled) {
 					t.Fatalf("err = %v, want context.Canceled", err)
 				}
@@ -97,7 +98,7 @@ func TestProvidersReturnTheCallbackError(t *testing.T) {
 			t.Cleanup(srv.Close)
 
 			calls := 0
-			err := pc.newProvider(t, srv.URL).ChatStream(t.Context(), "any-model", nil, func(string) error {
+			err := pc.newProvider(t, srv.URL, nil).ChatStream(t.Context(), "any-model", nil, func(string) error {
 				calls++
 				return errStop
 			})
@@ -106,6 +107,31 @@ func TestProvidersReturnTheCallbackError(t *testing.T) {
 			}
 			if calls != 1 {
 				t.Errorf("callback ran %d times, want 1", calls)
+			}
+		})
+	}
+}
+
+// TestProvidersTimeOutWaitingForFirstByte is a contract test: a provider must use
+// its HTTPClient, and give up when no response headers arrive in time.
+func TestProvidersTimeOutWaitingForFirstByte(t *testing.T) {
+	for name, pc := range providerCases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				io.Copy(io.Discard, r.Body)
+				select {
+				case <-r.Context().Done(): // the client gave up
+				case <-time.After(2 * time.Second): // upper bound, so a provider without the timeout cannot hang the test
+				}
+			}))
+			t.Cleanup(srv.Close)
+
+			client := NewHTTPClient(100 * time.Millisecond)
+			err := pc.newProvider(t, srv.URL, client).ChatStream(t.Context(), "any-model", nil, func(string) error { return nil })
+			var netErr net.Error
+			if !errors.As(err, &netErr) || !netErr.Timeout() {
+				t.Fatalf("err = %v, want a timeout", err)
 			}
 		})
 	}

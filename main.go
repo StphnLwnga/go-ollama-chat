@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/StphnLwnga/go-ollama-chat/ai"
 	"github.com/StphnLwnga/go-ollama-chat/config"
@@ -33,9 +34,11 @@ func main() {
 
 	// Build the routing table: each model name maps to the provider that serves it.
 	router := ai.NewRouter()
-	router.Register(ai.Ollama{BaseURL: cfg.OllamaURL}, cfg.OllamaModel)
+	// First-byte budgets come from measurements: a local cold start from disk plus a long
+	// prefill took about 18s; a hosted provider answers in about a second.
+	router.Register(ai.Ollama{BaseURL: cfg.OllamaURL, HTTPClient: ai.NewHTTPClient(time.Minute)}, cfg.OllamaModel)
 	if cfg.GroqAPIKey != "" {
-		router.Register(ai.Groq{APIKey: string(cfg.GroqAPIKey)},
+		router.Register(ai.Groq{APIKey: string(cfg.GroqAPIKey), HTTPClient: ai.NewHTTPClient(15 * time.Second)},
 			"openai/gpt-oss-20b",
 			"openai/gpt-oss-120b",
 			"qwen/qwen3.8-27b",

@@ -15,8 +15,9 @@ const groqEndpoint = "https://api.groq.com/openai/v1/chat/completions"
 
 // Groq implements the Provider interface
 type Groq struct {
-	APIKey   string
-	Endpoint string
+	APIKey     string
+	Endpoint   string
+	HTTPClient *http.Client // nil means a client with default timeouts
 }
 
 type groqText struct {
@@ -62,7 +63,7 @@ func (g Groq) post(ctx context.Context, model string, messages []Message, stream
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+g.APIKey)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := clientOrDefault(g.HTTPClient).Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("ai: groq request: %w", err)
 	}
