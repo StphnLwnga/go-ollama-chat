@@ -149,6 +149,8 @@ curl -s https://api.groq.com/openai/v1/models -H "Authorization: Bearer $GROQ_AP
 
 A new Groq model must also be added to the routing table in `main.go` before the app sends messages to it.
 
+Each call to a provider has a time limit per phase but none on the whole request, because an answer can stream for minutes. A provider has 5 s to connect (10 s for the TLS handshake) and a first-byte budget to start answering: 1 minute for Ollama, which covers a cold start, and 15 s for Groq. The server closes a connection that takes more than 5 s to send its headers or 30 s to send its request, and closes an idle connection after 2 minutes. Each streamed event has 10 s to be written, so a client that stops reading cannot hold the handler; the server has no `WriteTimeout`, because a limit on the whole response would cut off every streamed answer.
+
 ## Configuration
 
 The app reads its settings once, at startup. If any setting is invalid, it stops and lists every invalid setting at once.
@@ -198,6 +200,16 @@ To repeat a run, start the app and replace `<model>` with a model name:
 curl -s -N -o /dev/null -X POST localhost:8080/chat -H 'Content-Type: application/json' -d '{"model":"<model>","messages":[{"role":"user","content":"Explain what an HTTP status code is in three sentences."}]}' -w 'first token %{time_starttransfer}s, total %{time_total}s\n'
 ```
 
+### Cancellation and timeouts
+
+Measured on 2026-10-02 with local llama3.2:3b on the same Apple M4.
+
+- **The client gives up during prefill** (a 26 KB prompt, the client gives up at 1.5 s): before this change, Ollama ran on for 17.3 s and the cut-off reply was saved as complete. Now Ollama stops at 1.67 s, and nothing is saved.
+- **The client gives up mid-stream** (at 4 s): Ollama stops at about 4.0 s, and nothing is saved.
+- **Cold start**: the first token came after 4.52 s (the table's 5.6 s is from 2026-09-29). With a 1 s first-byte budget, every cold start fails with `timeout awaiting response headers`, which is why the local budget is 1 minute.
+- **Slow headers**: before, a connection that sent its headers slowly was still open after 20 s. Now the server closes it at 5.00 s.
+- **A long answer**: a 33.3 s streamed answer completes with the 30 s `ReadTimeout` in place.
+
 ## Project layout
 
 ```bash
@@ -208,6 +220,7 @@ ai/provider.go         Provider interface + package facade; handlers call only t
 ai/router.go           Routing table: sends each model to the provider that serves it
 ai/ollama.go           Ollama provider (local)
 ai/groq.go             Groq provider (hosted, needs GROQ_API_KEY)
+ai/client.go           HTTP client for providers: a timeout per phase, none on the whole request
 db/db.go               SQLite persistence: saves and loads the conversation
 handlers/chat.go       The SSE streaming chat endpoint
 handlers/history.go    Serves the saved conversation as JSON
