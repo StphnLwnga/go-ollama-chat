@@ -213,6 +213,7 @@ handlers/chat.go       The SSE streaming chat endpoint
 handlers/history.go    Serves the saved conversation as JSON
 handlers/models.go     Serves the available model names as JSON
 handlers/handlers.go   Page handler
+sse/sse.go             Server-Sent Events writer with a write deadline per event
 templates/index.html   Chat UI
 static/                style.css + chat.js
 ```

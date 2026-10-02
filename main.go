@@ -57,7 +57,20 @@ func main() {
 	}
 
 	log.Printf("🚀 Server running → http://localhost%s", cfg.Addr())
-	log.Fatal(http.ListenAndServe(cfg.Addr(), mux))
+	log.Fatal(newServer(cfg.Addr(), mux).ListenAndServe())
+}
+
+// newServer returns the HTTP server, with timeouts against slow and idle clients.
+func newServer(addr string, h http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           h,
+		ReadHeaderTimeout: 5 * time.Second,  // a client that sends headers slowly cannot hold a connection (Slowloris)
+		ReadTimeout:       30 * time.Second, // the whole request, body included
+		IdleTimeout:       2 * time.Minute,  // a kept-alive connection with no new request
+		// No WriteTimeout: it covers the whole response, so it would cut off every
+		// streamed answer. The chat handler sets a deadline for each event instead.
+	}
 }
 
 // route is one HTTP route: a ServeMux pattern and its handler.

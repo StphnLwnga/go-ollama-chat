@@ -7,13 +7,16 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/StphnLwnga/go-ollama-chat/ai"
 	"github.com/StphnLwnga/go-ollama-chat/db"
+	"github.com/StphnLwnga/go-ollama-chat/sse"
 )
 
-// errClientGone marks a failed write to the browser: the client closed the connection.
-var errClientGone = errors.New("client disconnected")
+// eventWriteTimeout bounds each event write. A browser that is reading takes
+// microseconds; only a client that has stopped reading reaches this limit.
+const eventWriteTimeout = 10 * time.Second
 
 // Chat streams an AI response to the browser token-by-token using
 // Server-Sent Events (SSE), using the whole conversation as context.
@@ -50,13 +53,13 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no") // stops proxies (e.g. Nginx) from buffering the stream
 
-	// 3. Assert http.Flusher ────────────────────────────────────────────
-	// Flush() is what physically pushes each token to the browser.
-	flusher, ok := w.(http.Flusher)
-	if !ok {
+	// 3. Check that the response can stream ────────────────────────────
+	// Flushing is what physically pushes each token to the browser.
+	if _, ok := w.(http.Flusher); !ok {
 		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
 		return
 	}
+	events := sse.NewWriter(w, eventWriteTimeout)
 
 	// 4. Persist the new user turn (the last message in the conversation) ─
 	last := req.Messages[len(req.Messages)-1]
@@ -71,18 +74,10 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 	// callback, which we forward to the browser AND append to `reply`.
 	var reply strings.Builder
 	err := ai.ChatStream(r.Context(), model, req.Messages, func(token string) error {
-		reply.WriteString(token)            // accumulate so we can save the whole reply
-		payload, err := json.Marshal(token) // JSON-encode so newlines/quotes can't break the SSE format
-		if err != nil {
-			return err
-		}
-		if _, err := fmt.Fprintf(w, "data: %s\n\n", payload); err != nil {
-			return fmt.Errorf("%w: %w", errClientGone, err) // stops the stream
-		}
-		flusher.Flush() // push this token out immediately
-		return nil
+		reply.WriteString(token)  // accumulate so we can save the whole reply
+		return events.Send(token) // an error stops the stream
 	})
-	if r.Context().Err() != nil || errors.Is(err, errClientGone) {
+	if r.Context().Err() != nil || errors.Is(err, sse.ErrClientGone) {
 		// The client left. That is not a server error, and nobody is there to read [ERROR].
 		// The reply is cut off, so it is not saved as a complete answer.
 		log.Printf("chat: client left after %d bytes of reply", reply.Len())
@@ -90,8 +85,7 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		log.Printf("chat: stream error: %v", err)
-		fmt.Fprint(w, "data: \"[ERROR]\"\n\n")
-		flusher.Flush()
+		events.Send("[ERROR]")
 		return
 	}
 
@@ -103,6 +97,5 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 7. Send the [DONE] sentinel ───────────────────────────────────────
-	fmt.Fprint(w, "data: \"[DONE]\"\n\n")
-	flusher.Flush()
+	events.Send("[DONE]")
 }
