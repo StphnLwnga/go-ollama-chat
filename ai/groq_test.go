@@ -41,7 +41,7 @@ func TestGroqChatStreamSendsTokensInOrder(t *testing.T) {
 	g := Groq{APIKey: "test-key", Endpoint: srv.URL}
 
 	var got []string
-	err := g.ChatStream("any-model", []Message{{Role: "user", Content: "hi"}}, func(tok string) error {
+	err := g.ChatStream(t.Context(), "any-model", []Message{{Role: "user", Content: "hi"}}, func(tok string) error {
 		got = append(got, tok)
 		return nil
 	})
@@ -57,7 +57,7 @@ func TestGroqChatStreamReturnsErrorOnBadStatus(t *testing.T) {
 	srv := fakeGroq(t, http.StatusUnauthorized, nil)
 	g := Groq{APIKey: "test-key", Endpoint: srv.URL}
 
-	err := g.ChatStream("any-model", []Message{{Role: "user", Content: "hi"}}, func(string) error { return nil })
+	err := g.ChatStream(t.Context(), "any-model", []Message{{Role: "user", Content: "hi"}}, func(string) error { return nil })
 	if err == nil {
 		t.Fatal("expected an error for a 401 reply, got nil")
 	}
@@ -75,7 +75,7 @@ func TestGroqChatStreamStopsWhenCallerStops(t *testing.T) {
 	g := Groq{APIKey: "test-key", Endpoint: srv.URL}
 
 	calls := 0
-	err := g.ChatStream("any-model", []Message{{Role: "user", Content: "hi"}}, func(string) error {
+	err := g.ChatStream(t.Context(), "any-model", []Message{{Role: "user", Content: "hi"}}, func(string) error {
 		calls++
 		return fmt.Errorf("client went away")
 	})

@@ -3,6 +3,7 @@ package ai
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -74,7 +75,7 @@ func (g Groq) post(model string, messages []Message, stream bool) (*http.Respons
 	return resp, nil
 }
 
-func (g Groq) Chat(model string, messages []Message) (string, error) {
+func (g Groq) Chat(ctx context.Context, model string, messages []Message) (string, error) {
 	resp, err := g.post(model, messages, false)
 	if err != nil {
 		return "", err
@@ -91,7 +92,7 @@ func (g Groq) Chat(model string, messages []Message) (string, error) {
 	return out.Choices[0].Message.Content, nil
 }
 
-func (g Groq) ChatStream(model string, messages []Message, onChunk func(string) error) error {
+func (g Groq) ChatStream(ctx context.Context, model string, messages []Message, onChunk func(string) error) error {
 	resp, err := g.post(model, messages, true)
 	if err != nil {
 		return err

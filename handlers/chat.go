@@ -66,7 +66,7 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 	// Pass the full conversation to Ollama; each token comes back via the
 	// callback, which we forward to the browser AND append to `reply`.
 	var reply strings.Builder
-	err := ai.ChatStream(model, req.Messages, func(token string) error {
+	err := ai.ChatStream(r.Context(), model, req.Messages, func(token string) error {
 		reply.WriteString(token)            // accumulate so we can save the whole reply
 		payload, err := json.Marshal(token) // JSON-encode so newlines/quotes can't break the SSE format
 		if err != nil {

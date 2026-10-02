@@ -14,6 +14,7 @@ package ai
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -60,7 +61,7 @@ func (o Ollama) chatURL() string {
 //
 // Use this for: summarizers, analyzers, document Q&A, anything where you
 // want the full answer before rendering it
-func (o Ollama) Chat(model string, messages []Message) (string, error) {
+func (o Ollama) Chat(ctx context.Context, model string, messages []Message) (string, error) {
 	body, err := json.Marshal(chatRequest{
 		Model:    model,
 		Messages: messages,
@@ -93,7 +94,7 @@ func (o Ollama) Chat(model string, messages []Message) (string, error) {
 //
 // onChunk receives one token at a time. Return a non-nil error from onChunk
 // to abort the stream early (e.g. when the client disconnects).
-func (o Ollama) ChatStream(model string, messages []Message, onChunk func(string) error) error {
+func (o Ollama) ChatStream(ctx context.Context, model string, messages []Message, onChunk func(string) error) error {
 	body, err := json.Marshal(chatRequest{
 		Model:    model,
 		Messages: messages,
